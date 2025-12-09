@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>BARSTOCK — Inventario & Pedidos</title>
+
+<!-- Styles -->
+<link rel="stylesheet" href="css/style.css">
+
+<!-- Libraries CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+
+<!-- Main script -->
+<script defer src="js/script.js"></script>
+</head>
+<body>
+
+<header class="header">
+  <div class="brand">
+    <h1>BARSTOCK ⚡</h1>
+    <p class="tag">Inventario · Pedidos · Gestión (Admin / Mesero / Cliente)</p>
+  </div>
+  <div class="auth-area">
+    <span id="welcomeText">No autenticado</span>
+    <button id="btnOpenLogin" class="btn small">Iniciar sesión</button>
+    <button id="btnOpenRegister" class="btn small">Registrarse</button>
+    <button id="btnLogout" class="btn small hidden">Cerrar sesión</button>
+  </div>
+</header>
+
+<main class="container">
+
+  <!-- LOGIN MODAL -->
+  <div id="modalLogin" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <h2>Iniciar sesión</h2>
+      <input id="loginUser" placeholder="Usuario" />
+      <input id="loginPass" type="password" placeholder="Contraseña" />
+      <div class="row">
+        <button id="doLogin" class="btn primary">Entrar</button>
+        <button onclick="closeModal('modalLogin')" class="btn">Cancelar</button>
+      </div>
+      <p class="hint">Demo: admin/1234 (admin) · mesero/1234 (mesero) · cliente/0000 (cliente)</p>
+    </div>
+  </div>
+
+  <!-- REGISTER MODAL -->
+  <div id="modalRegister" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <h2>Crear cuenta</h2>
+      <input id="regUser" placeholder="Usuario" />
+      <input id="regPass" type="password" placeholder="Contraseña" />
+      <select id="regRole">
+        <option value="cliente">Cliente</option>
+        <option value="mesero">Mesero</option>
+      </select>
+      <div class="row">
+        <button id="doRegister" class="btn primary">Crear</button>
+        <button onclick="closeModal('modalRegister')" class="btn">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD / MAIN -->
+  <section id="welcomePanel" class="panel">
+    <h2>Bienvenido a BARSTOCK</h2>
+    <p>Inicia sesión o regístrate para usar el sistema.</p>
+  </section>
+
+  <!-- ADMIN PANEL -->
+  <section id="adminPanel" class="panel hidden">
+    <div class="panel-header">
+      <h2>Administrador — Inventario</h2>
+      <div class="panel-actions">
+        <button onclick="exportExcel()" class="btn small">Exportar Excel</button>
+        <button onclick="exportCSV()" class="btn small">Exportar CSV</button>
+        <button onclick="exportPDF()" class="btn small">Exportar PDF</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <input id="searchAdmin" placeholder="Buscar producto..." oninput="renderAdminTable()" />
+      <div class="stats">
+        <div class="stat-card">
+          <div id="statTotalItems">0</div>
+          <small>Items</small>
+        </div>
+        <div class="stat-card">
+          <div id="statTotalValue">COP 0</div>
+          <small>Valor Inventario</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr><th>Producto</th><th>Categoría</th><th>Cantidad</th><th>Precio</th><th>Vencimiento</th><th>Acciones</th></tr>
+        </thead>
+        <tbody id="adminTbody"></tbody>
+      </table>
+    </div>
+
+    <form id="formAdd" class="form-inline" onsubmit="event.preventDefault(); adminAdd();">
+      <input id="addName" placeholder="Nombre" required />
+      <input id="addCategory" placeholder="Categoría" value="Bebidas" />
+      <input id="addQty" type="number" min="0" value="1" required />
+      <input id="addPrice" type="number" min="0" step="0.01" value="0" required />
+      <input id="addExpiry" type="date" />
+      <button class="btn primary">Agregar / Sumar</button>
+    </form>
+
+    <div class="charts">
+      <canvas id="chartCategories"></canvas>
+      <canvas id="chartTop"></canvas>
+    </div>
+  </section>
+
+  <!-- MESERO PANEL -->
+  <section id="meseroPanel" class="panel hidden">
+    <div class="panel-header">
+      <h2>Mesero — Registrar pedidos</h2>
+      <div class="panel-actions">
+        <button onclick="printPending()" class="btn small">Imprimir Pendientes (PDF)</button>
+      </div>
+    </div>
+
+    <div id="meseroGrid" class="grid"></div>
+
+    <h3>Pedidos pendientes</h3>
+    <ul id="ordersList" class="list"></ul>
+  </section>
+
+  <!-- CLIENTE PANEL -->
+  <section id="clientePanel" class="panel hidden">
+    <div class="panel-header">
+      <h2>Cliente — Menú</h2>
+    </div>
+
+    <div id="clienteGrid" class="grid"></div>
+
+    <aside class="cart">
+      <h3>Carrito</h3>
+      <ul id="cartItems" class="list"></ul>
+      <div class="cart-footer">
+        <div>Total: <strong id="cartTotal">COP 0</strong></div>
+        <div>
+          <button onclick="confirmCart()" class="btn primary">Confirmar pedido</button>
+        </div>
+      </div>
+    </aside>
+  </section>
+
+  <!-- COMMON FOOTER -->
+  <footer class="footer">
+    <small>BARSTOCK — demo · sin base de datos · persistencia en localStorage</small>
+  </footer>
+
+</main>
+</body>
+</html>
